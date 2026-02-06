@@ -355,7 +355,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  // ✅ COLE AQUI A URL DO SEU WEB APP (Apps Script publicado)
+  // ✅ WEB APP (Apps Script publicado)
   const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyvNKBdcwceseAKci_XXV8A7_nF4_ymqZNUPpaUBdOX_EaPyBQ6gIt3OYIm1shiwK4l/exec";
 
   const turmaSelect = document.getElementById('turmaSelect');
@@ -408,14 +408,24 @@
     setTimeout(()=> toast.style.display = 'none', 2600);
   }
 
+  // ✅ API blindada (evita redirect/CORS chato do Apps Script)
   async function api(action, data = {}){
-    const body = JSON.stringify({ action, ...data });
+    const payload = { action, ...data };
+
     const res = await fetch(WEBAPP_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body
+      mode: "cors",
+      redirect: "follow",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
     });
-    const json = await res.json();
+
+    const text = await res.text();
+
+    let json;
+    try { json = JSON.parse(text); }
+    catch(e){ throw new Error("Resposta não é JSON. Retorno: " + text.slice(0, 200)); }
+
     if (!json.ok) throw new Error(json.error || "Erro desconhecido");
     return json;
   }
@@ -534,7 +544,6 @@
 
       notify("Contato salvo ✅");
 
-      // atualiza localmente
       currentAluno.pai = i_pai.value.trim();
       currentAluno.mae = i_mae.value.trim();
       currentAluno.tel1 = i_tel1.value.trim();
@@ -651,7 +660,6 @@
     }
   }
 
-  // Busca local + busca global (server) para pegar aluno de outra turma
   let searchTimer = null;
   function onSearch(){
     clearTimeout(searchTimer);
@@ -664,7 +672,6 @@
         return;
       }
 
-      // tenta filtrar localmente primeiro
       const local = alunos.filter(a =>
         (a.nome || '').toLowerCase().includes(q.toLowerCase()) ||
         String(a.num || '').includes(q)
@@ -674,7 +681,6 @@
         return;
       }
 
-      // se não achou, busca global no servidor
       setLoading(true);
       try{
         const r = await api('buscar', { q, incluirInativos });
@@ -723,7 +729,6 @@
       .replaceAll("'","&#039;");
   }
 
-  // eventos
   turmaSelect.addEventListener('change', loadAlunos);
   showInactive.addEventListener('change', loadAlunos);
   btnReload.addEventListener('click', loadAlunos);
@@ -735,9 +740,9 @@
   btnNovo.addEventListener('click', novoAluno);
   searchInput.addEventListener('input', onSearch);
 
-  // init
+  // ✅ init corrigido (não trava quando a URL tá certa)
   (async function init(){
-    if (WEBAPP_URL.includes("https://script.google.com/macros/s/AKfycbyvNKBdcwceseAKci_XXV8A7_nF4_ymqZNUPpaUBdOX_EaPyBQ6gIt3OYIm1shiwK4l/exec")){
+    if (!WEBAPP_URL || WEBAPP_URL.includes("COLE_AQUI")){
       alert("Você precisa colar a URL do WebApp na constante WEBAPP_URL do HTML.");
       return;
     }
