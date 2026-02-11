@@ -112,7 +112,6 @@
     }
     .item.clickable{cursor:pointer;}
     .item.clickable:hover{transform: translateY(-1px); box-shadow: 0 10px 22px rgba(12,34,56,.08);}
-    .item.active{outline: 3px solid rgba(76,201,240,.35);}
     .item .name{font-weight:900;}
     .pill{
       display:inline-flex; align-items:center; gap:6px;
@@ -130,14 +129,6 @@
       input{min-width: 180px;}
       .list{max-height: 320px;}
     }
-    .kv{
-      display:grid; grid-template-columns: 170px 1fr;
-      gap:8px 12px; font-size:14px; padding:10px 0 2px;
-    }
-    .kv b{color:#0b1b2b}
-    .hr{height:1px; background:var(--line); margin:10px 0;}
-    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
-    .right{margin-left:auto}
 
     .toast{
       position: fixed; left: 50%; transform: translateX(-50%); bottom: 16px;
@@ -164,6 +155,12 @@
     .dot:nth-child(2){animation-delay:.12s}
     .dot:nth-child(3){animation-delay:.24s}
     @keyframes pulse{from{transform:scale(.85); opacity:.55} to{transform:scale(1.2); opacity:1}}
+
+    .sectionTitle{
+      margin:0 0 8px;
+      font-size:14px;
+      font-weight:1000;
+    }
   </style>
 </head>
 <body>
@@ -221,26 +218,39 @@
         </div>
 
         <div id="detail" style="display:none">
+
           <div class="row">
-            <div>
-              <div style="font-size:18px;font-weight:1000" id="d_nome">—</div>
-              <div class="muted">Nº: <b id="d_num">—</b> • Status: <b id="d_status">—</b></div>
+            <div style="flex:1; min-width:260px">
+              <div class="muted" style="margin-bottom:6px">Nome do aluno</div>
+              <input id="u_nome" placeholder="Nome do aluno" style="width:100%; min-width:0" />
+              <div class="muted" style="margin-top:6px">
+                Nº: <b id="d_num">—</b> • Status: <b id="d_status">—</b>
+              </div>
             </div>
+
             <div class="right"></div>
             <button class="btn ghost" id="btnInativar">Inativar</button>
           </div>
 
-          <div class="kv">
-            <b>INEP</b><span id="d_inep">—</span>
-            <b>CPF</b><span id="d_cpf">—</span>
-            <b>Data matrícula</b><span id="d_matricula">—</span>
-            <b>Idade</b><span id="d_idade">—</span>
-            <b>Deficiência</b><span id="d_def">—</span>
+          <div class="hr"></div>
+
+          <h4 class="sectionTitle">🧾 Dados do aluno (editável)</h4>
+          <div class="two">
+            <input id="u_inep" placeholder="INEP" />
+            <input id="u_cpf" placeholder="CPF" />
+            <input id="u_matricula" placeholder="Data matrícula (dd/mm/aaaa)" />
+            <input id="u_idade" placeholder="Idade" />
+            <input id="u_def" placeholder="Deficiência" />
+            <div></div>
+          </div>
+
+          <div class="row" style="margin-top:10px">
+            <button class="btn ok" id="btnSalvarAluno">Salvar dados do aluno</button>
           </div>
 
           <div class="hr"></div>
 
-          <h4 style="margin:0 0 8px">👨‍👩‍👧 Contato dos responsáveis</h4>
+          <h4 class="sectionTitle">👨‍👩‍👧 Contato dos responsáveis</h4>
           <div class="two">
             <input id="i_pai" placeholder="Nome do pai" />
             <input id="i_mae" placeholder="Nome da mãe" />
@@ -258,7 +268,7 @@
 
           <div class="hr"></div>
 
-          <h4 style="margin:0 0 8px">📝 Observações diárias</h4>
+          <h4 class="sectionTitle">📝 Observações diárias</h4>
           <div class="two">
             <input id="obsData" placeholder="Data (dd/mm/aaaa)" />
             <div></div>
@@ -270,8 +280,8 @@
           </div>
 
           <div class="hr"></div>
-
           <div id="obsList" class="list" style="max-height:320px"></div>
+
         </div>
       </div>
     </section>
@@ -291,7 +301,6 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  // ✅ WEB APP (Apps Script publicado)
   const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyvNKBdcwceseAKci_XXV8A7_nF4_ymqZNUPpaUBdOX_EaPyBQ6gIt3OYIm1shiwK4l/exec";
 
   const turmaSelect = document.getElementById('turmaSelect');
@@ -307,14 +316,16 @@
   const emptyState = document.getElementById('emptyState');
   const detail = document.getElementById('detail');
 
-  const d_nome = document.getElementById('d_nome');
   const d_num = document.getElementById('d_num');
   const d_status = document.getElementById('d_status');
-  const d_inep = document.getElementById('d_inep');
-  const d_cpf = document.getElementById('d_cpf');
-  const d_matricula = document.getElementById('d_matricula');
-  const d_idade = document.getElementById('d_idade');
-  const d_def = document.getElementById('d_def');
+
+  // campos editáveis do aluno
+  const u_nome = document.getElementById('u_nome');
+  const u_inep = document.getElementById('u_inep');
+  const u_cpf = document.getElementById('u_cpf');
+  const u_matricula = document.getElementById('u_matricula');
+  const u_idade = document.getElementById('u_idade');
+  const u_def = document.getElementById('u_def');
 
   const i_pai = document.getElementById('i_pai');
   const i_mae = document.getElementById('i_mae');
@@ -332,6 +343,7 @@
   const btnMover = document.getElementById('btnMover');
   const btnInativar = document.getElementById('btnInativar');
   const btnNovo = document.getElementById('btnNovo');
+  const btnSalvarAluno = document.getElementById('btnSalvarAluno');
 
   let turmas = [];
   let alunos = [];
@@ -344,7 +356,6 @@
     setTimeout(()=> toast.style.display = 'none', 2600);
   }
 
-  // ✅ API blindada (evita CORS/redirect chato do Apps Script)
   async function api(action, data = {}){
     const payload = { action, ...data };
 
@@ -434,17 +445,19 @@
   }
 
   function fillDetail(a){
-    d_nome.textContent = a.nome || '—';
+    // número e status
     d_num.textContent = a.num || '—';
     d_status.textContent = a.status || '—';
 
-    d_inep.textContent = a.inep || '—';
-    d_cpf.textContent = a.cpf || '—';
-    d_matricula.textContent = formatDateBR(a.dataMatricula);
+    // dados editáveis
+    u_nome.value = a.nome || '';
+    u_inep.value = a.inep || '';
+    u_cpf.value = a.cpf || '';
+    u_matricula.value = formatDateBR(a.dataMatricula) || '';
+    u_idade.value = a.idade || '';
+    u_def.value = a.deficiencia || '';
 
-    d_idade.textContent = a.idade || '—';
-    d_def.textContent = a.deficiencia || '—';
-
+    // contato
     i_pai.value = a.pai || '';
     i_mae.value = a.mae || '';
     i_tel1.value = a.tel1 || '';
@@ -452,6 +465,11 @@
 
     btnInativar.textContent = (a.status === 'INATIVO') ? 'Reativar' : 'Inativar';
     btnInativar.className = 'btn ' + ((a.status === 'INATIVO') ? 'ok' : 'danger');
+
+    // sugere data de hoje pro campo de observação se estiver vazio
+    if (!obsData.value.trim()){
+      obsData.value = todayBR_();
+    }
   }
 
   function clearDetail(){
@@ -461,6 +479,56 @@
     obsList.innerHTML = "";
     obsData.value = "";
     obsTexto.value = "";
+  }
+
+  // ✅ salvar dados do aluno (nome, inep, cpf, matricula, idade, def)
+  async function salvarAluno(){
+    if (!currentAluno) return;
+
+    const dados = {
+      nome: u_nome.value.trim(),
+      inep: u_inep.value.trim(),
+      cpf: u_cpf.value.trim(),
+      dataMatricula: u_matricula.value.trim(),
+      idade: u_idade.value.trim(),
+      deficiencia: u_def.value.trim()
+    };
+
+    if (!dados.nome){
+      notify("O nome do aluno não pode ficar vazio.");
+      return;
+    }
+
+    setLoading(true);
+    try{
+      await api('atualizarAluno', {
+        turma: currentAluno.turma,
+        num: currentAluno.num,
+        dados
+      });
+
+      notify("Dados do aluno salvos ✅");
+
+      // atualiza localmente
+      currentAluno.nome = dados.nome;
+      currentAluno.inep = dados.inep;
+      currentAluno.cpf = dados.cpf;
+      currentAluno.dataMatricula = dados.dataMatricula;
+      currentAluno.idade = dados.idade;
+      currentAluno.deficiencia = dados.deficiencia;
+
+      // recarrega lista pra refletir nome etc
+      await loadAlunos();
+
+      // tenta reabrir o mesmo aluno na lista carregada
+      const reopened = alunos.find(x => String(x.num) === String(currentAluno.num));
+      if (reopened) await openAluno(reopened);
+
+    }catch(e){
+      notify("Erro: " + e.message);
+    }finally{
+      setLoading(false);
+    }
   }
 
   async function saveContato(){
@@ -532,7 +600,6 @@
     }
   }
 
-  // ✅ Agora: data em PT-BR + texto em negrito + botão editar
   function renderObs(obs){
     obsList.innerHTML = "";
     if (!obs.length){
@@ -547,12 +614,10 @@
       const dataBR = formatObsDateBR(o.dataObs);
       const ts = new Date(o.timestamp || '');
 
-      // topo com data em PT-BR (sem inglês)
       const top = document.createElement('div');
       top.className = 'name';
       top.innerHTML = `📅 ${escapeHtml(dataBR)} <span class="muted">• ${escapeHtml(o.turma || '')}</span>`;
 
-      // texto em negrito
       const txt = document.createElement('div');
       txt.style.marginTop = '6px';
       txt.style.fontWeight = '900';
@@ -584,7 +649,6 @@
     }
   }
 
-  // ✅ Editar observação (corrigir data/texto)
   async function editObs(o){
     if (!o || !o.id){
       notify("Não achei o ID da observação para editar.");
@@ -668,7 +732,6 @@
     }
   }
 
-  // Busca local + global
   let searchTimer = null;
   function onSearch(){
     clearTimeout(searchTimer);
@@ -729,31 +792,28 @@
     }
   }
 
-  // --- formatos ---
   function formatDateBR(value){
-    if (!value) return '—';
+    if (!value) return '';
     if (typeof value === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(value.trim())) return value.trim();
     const d = new Date(value);
     if (isNaN(d.getTime())) return String(value);
     return d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
   }
 
-  // ✅ Converte "Fri Feb 06..." / ISO / etc para dd/MM/aaaa
   function formatObsDateBR(value){
     if (!value) return '—';
     const s = String(value).trim();
-
-    // já está dd/MM/aaaa
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
-
-    // tenta parsear (Date string em inglês, ISO etc)
     const d = new Date(s);
     if (!isNaN(d.getTime())) {
       return d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
     }
-
-    // fallback (não quebra)
     return s;
+  }
+
+  function todayBR_(){
+    const d = new Date();
+    return d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
   }
 
   function escapeHtml(s){
@@ -765,7 +825,6 @@
       .replaceAll("'","&#039;");
   }
 
-  // eventos
   turmaSelect.addEventListener('change', loadAlunos);
   showInactive.addEventListener('change', loadAlunos);
   btnReload.addEventListener('click', loadAlunos);
@@ -775,9 +834,9 @@
   btnMover.addEventListener('click', mover);
   btnInativar.addEventListener('click', toggleStatus);
   btnNovo.addEventListener('click', novoAluno);
+  btnSalvarAluno.addEventListener('click', salvarAluno);
   searchInput.addEventListener('input', onSearch);
 
-  // init
   (async function init(){
     if (!WEBAPP_URL){
       alert("Você precisa colar a URL do WebApp na constante WEBAPP_URL do HTML.");
